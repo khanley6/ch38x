@@ -116,7 +116,7 @@ static int wch_ser_startup(struct ser_port *);
 static void wch_ser_shutdown(struct ser_port *);
 static unsigned int wch_ser_get_divisor(struct ser_port *, unsigned int);
 static void wch_ser_set_termios(struct ser_port *, struct WCHTERMIOS *, struct WCHTERMIOS *);
-static void wch_ser_timeout(unsigned long);
+static void wch_ser_timeout(struct timer_list *);
 
 
 static _INLINE_ void ser_receive_chars(struct wch_ser_port *, unsigned char *);
@@ -3112,10 +3112,10 @@ wch_ser_set_termios(
 
 static void 
 wch_ser_timeout(
-				unsigned long data
+				struct timer_list *t
 				)
 {
-    struct wch_ser_port *sp = (struct wch_ser_port *)data;
+    struct wch_ser_port *sp = from_timer(sp, t, timer);
     unsigned int timeout;
     unsigned int iir;
     iir = READ_UART_IIR(sp);
@@ -3673,9 +3673,7 @@ wch_ser_register_ports(
         if (sp->port.iobase)
 #endif
         {
-            init_timer(&sp->timer);
-			
-            sp->timer.function = wch_ser_timeout;
+            timer_setup(&sp->timer, wch_ser_timeout, 0);
 			
             sp->mcr_mask = ~0;
             sp->mcr_force = 0;
